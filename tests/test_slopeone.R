@@ -9,14 +9,14 @@ test_that('empty rating', {
 
 test_that('duplicate item ratins', {
   model <- build_slopeone(
-    data.table(user_id=c('u1', 'u1', 'u1'),
-               item_id=c('i1', 'i2', 'i1'),
-               rating=c(3, 4, 4)))
+    data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2'),
+               item_id=c('i1', 'i2', 'i1', 'i1', 'i2'),
+               rating=c(3, 4, 4, 1, 5)))
   expected_model <- data.frame(
     item_id1=c('i1', 'i2'),
     item_id2=c('i2', 'i1'),
-    b=c(.5, -.5),
-    support=c(1, 1),
+    b=c((1+0+4)/3, (-1+0-4)/3),
+    support=c(3, 3),
     stringsAsFactors=FALSE)
   expect_that(model, is_equivalent_to(expected_model))
 })
