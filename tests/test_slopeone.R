@@ -75,7 +75,6 @@ test_that('predict_slopeone_for_user', {
   expect_equal(first_rating, 4)
 })
 
-
 test_that('predict_slopeone', {
   ratings <- data.table(
     user_id=c('u1', 'u1', 'u2', 'u2', 'u3', 'u3', 'u4', 'u4'),
@@ -89,15 +88,15 @@ test_that('predict_slopeone', {
   expected_ratings$predicted_rating <- c(5)
   expect_that(predict_slopeone(model, targets, ratings),
               is_equivalent_to(expected_ratings))
-  
+
   # Item that doesn't exist.
   targets <- data.table(user_id=c('u2'), item_id=c('i999'))
   expected_ratings <- targets
   expected_ratings$predicted_rating <- c(NA)
   expect_that(predict_slopeone(model, targets, ratings),
               is_equivalent_to(expected_ratings))
-  
-  # Item that hasn't been rated.  
+
+  # Item that hasn't been rated.
   targets <- data.table(user_id=c('u1', 'u2'), item_id=c('i3', 'i2'))
   expected_ratings <- targets
   expected_ratings$predicted_rating <- c(
