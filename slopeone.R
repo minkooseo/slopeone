@@ -15,13 +15,20 @@ require(reshape2)
 #  ratings: A data table containing (user_id, item_id, rating).
 # 
 # Returns:
-#  A list of (global, user, item) where global is global rating mean and
-# user and item is data table of (id, mean).
+#  A list of (global, user, item, ratings) where global is global rating mean and
+#  user and item is data table of (id, mean). 'ratings' is normalized ratings data table.
 normalize_ratings <- function(ratings, ...) {
   result <- list()
   result$global <- ratings[, mean(rating)]
   result$user <- ratings[, list(mean_rating=mean(rating)), by='user_id']
   result$item <- ratings[, list(mean_rating=mean(rating)), by='item_id']
+  
+  ratings$rating <- ratings$rating - result$global
+  setkey(result$user, user_id)
+  ratings$rating <- ratings$rating - result$user[J(ratings$user_id), ]$mean_rating
+  setkey(result$item, item_id)
+  ratings$rating <- ratings$rating - result$item[J(ratings$item_id), ]$mean_rating
+  result$ratings <- ratings
   return(result)
 }
 

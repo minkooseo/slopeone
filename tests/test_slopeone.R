@@ -39,6 +39,9 @@ test_that('unnormalize_ratings', {
                   rating=c(3+1+1, 4+1+1+3, 4+1+1,
                            1+1+2, 5+1+2+3, 
                            3+1+3, 2+1+4))))
+  normalized <- normalize_ratings(ratings)
+  expect_that(unnormalize_ratings(normalized, normalized$ratings),
+              is_equivalent_to(ratings))
 })
 
 test_that('build_slopeone: empty rating', {
