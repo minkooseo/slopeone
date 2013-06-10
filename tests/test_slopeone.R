@@ -2,26 +2,65 @@ source('../slopeone.R')
 
 context('slopeone')
 
-test_that('empty rating', {
+test_that('normalize_ratings', {
+  normalized <- normalize_ratings(
+    data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
+               item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
+               rating=c(3, 4, 4, 1, 5, 3, 2)))
+  expect_equal(normalized$global, mean(c(3, 4, 4, 1, 5, 3, 2)))
+  expect_that(normalized$user,
+              is_equivalent_to(data.table(
+                user_id=c('u1', 'u2', 'u3'),
+                mean_rating=c(mean(c(3, 4, 4)),
+                              mean(c(1, 5)),
+                              mean(c(3, 2))))))
+  expect_that(normalized$item,
+              is_equivalent_to(data.table(
+                item_id=c('i1', 'i2', 'i3'),
+                mean_rating=c(mean(c(3, 4, 1)),
+                              mean(c(4, 5, 3)),
+                              mean(c(2))))))
+})
+
+test_that('unnormalize_ratings', {
+  ratings <- data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
+                        item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
+                        rating=c(3, 4, 4, 1, 5, 3, 2))
+  normalized <- list()
+  normalized$global <- 1
+  normalized$user <- data.table(user_id=c('u1', 'u2'), mean_rating=c(1, 2))
+  normalized$item <- data.table(item_id=c('i2', 'i3'), mean_rating=c(3, 4))
+  expect_that(unnormalize_ratings(normalized, ratings),
+              is_equivalent_to(
+                data.table(
+                  user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
+                  item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
+                  # old value + global + user mean + item mean
+                  rating=c(3+1+1, 4+1+1+3, 4+1+1,
+                           1+1+2, 5+1+2+3, 
+                           3+1+3, 2+1+4))))
+})
+
+test_that('build_slopeone: empty rating', {
   model <- build_slopeone(data.frame())
   expect_equal(NROW(model), 0)
 })
 
-test_that('duplicate item ratins', {
+test_that('duplicate item rating model', {
   model <- build_slopeone(
-    data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2'),
-               item_id=c('i1', 'i2', 'i1', 'i1', 'i2'),
-               rating=c(3, 4, 4, 1, 5)))
+    data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
+               item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
+               rating=c(3, 4, 4, 1, 5, 3, 2)))
   expected_model <- data.frame(
-    item_id1=c('i1', 'i2'),
-    item_id2=c('i2', 'i1'),
-    b=c((1+0+4)/3, (-1+0-4)/3),
-    support=c(3, 3),
+    item_id1=c('i1', 'i2', 'i2', 'i3'),
+    item_id2=c('i2', 'i1', 'i3', 'i2'),
+    b=c((1+0+4)/3, (-1+0-4)/3, 2 - 3, 3 - 2),
+    support=c(3, 3, 1, 1),
     stringsAsFactors=FALSE)
   expect_that(model, is_equivalent_to(expected_model))
 })
 
-test_that('multiple users', {
+test_that('build_slopeone: multiple user ratings', {
   model <- build_slopeone(
     data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2'),
                item_id=c('i1', 'i2', 'i3', 'i1', 'i2'),
@@ -81,6 +120,7 @@ test_that('predict_slopeone', {
     item_id=c('i1', 'i2', 'i1', 'i3', 'i1', 'i3', 'i2', 'i3'),
     rating=c( 5,    2,    3,    1,    5,    1,    3,    2))
   model <- build_slopeone(ratings)
+  
 
   # Previously rated item.
   targets <- data.table(user_id=c('u1'), item_id=c('i1'))
@@ -97,11 +137,19 @@ test_that('predict_slopeone', {
               is_equivalent_to(expected_ratings))
 
   # Item that hasn't been rated.
+  # > model
+  #    item_id1 item_id2  b support
+  # 1:       i1       i2 -3       1
+  # 2:       i1       i3 -3       2
+  # 3:       i2       i1  3       1
+  # 4:       i2       i3 -1       1
+  # 5:       i3       i1  3       2
+  # 6:       i3       i2  1       1
   targets <- data.table(user_id=c('u1', 'u2'), item_id=c('i3', 'i2'))
   expected_ratings <- targets
   expected_ratings$predicted_rating <- c(
-    ((5-3)*2 + (2-1)*1)/3,
-    ((3-3)*1 + (1+1)*1)/2)
+    ((5-3)*2 + (2-1)*1)/(2+1),
+    ((3-3)*1 + (1+1)*1)/(1+1))
   expect_that(predict_slopeone(model, targets, ratings),
               is_equivalent_to(expected_ratings))
 })
