@@ -90,6 +90,9 @@ build_slopeone <- function(ratings, ...) {
   # ddply is slow when merging data frames within list while rbindlist is
   # much faster.
   score_diff_per_user <- rbindlist(score_diff_per_user)
+  if (NROW(score_diff_per_user) == 0) {
+    return(data.table(data.frame(item_id1=c(), item_id2=c(), b=c(), support=c())))
+  }
   score_diff_per_user$item_id1 <- as.character(score_diff_per_user$item_id1)
   score_diff_per_user$item_id2 <- as.character(score_diff_per_user$item_id2)
   # Compute average score diff between item 1 and item 2.
@@ -141,6 +144,9 @@ predict_slopeone_for_user <- function(model, target_item_id, ratings) {
     warning(paste(target_item_id,
                   ' is already rated by user, but there are multiple ratings.'))
     return(already_rated[1, ]$rating)
+  }
+  if (NROW(model) == 0) {
+    return(NA)
   }
   # Compute weighted average ratings.
   ratings <- rename(ratings, c('item_id'= "item_id1"))
