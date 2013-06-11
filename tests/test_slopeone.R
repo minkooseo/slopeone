@@ -3,10 +3,14 @@ source('../slopeone.R')
 context('slopeone')
 
 test_that('normalize_ratings', {
-  normalized <- normalize_ratings(
-    data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
-               item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
-               rating=c(3, 4, 4, 1, 5, 3, 2)))
+  ratings <- data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
+                        item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
+                        rating=c(3, 4, 4, 1, 5, 3, 2))
+  normalized <- normalize_ratings(ratings)
+  # Existing value is untouched.
+  expect_equal(rating[rating$user_id == 'u1' &
+                      rating&item_id == 'i2', rating] == 4)
+  # Check the normalization.
   expect_equal(normalized$global, mean(c(3, 4, 4, 1, 5, 3, 2)))
   expect_that(normalized$user,
               is_equivalent_to(data.table(
@@ -25,7 +29,7 @@ test_that('normalize_ratings', {
 test_that('unnormalize_ratings', {
   ratings <- data.table(user_id=c('u1', 'u1', 'u1', 'u2', 'u2', 'u3', 'u3'),
                         item_id=c('i1', 'i2', 'i1', 'i1', 'i2', 'i2', 'i3'),
-                        rating=c(3, 4, 4, 1, 5, 3, 2))
+                        predicted_rating=c(3, 4, 4, 1, 5, 3, 2))
   normalized <- list()
   normalized$global <- 1
   normalized$user <- data.table(user_id=c('u1', 'u2'), mean_rating=c(1, 2))
@@ -39,9 +43,6 @@ test_that('unnormalize_ratings', {
                   rating=c(3+1+1, 4+1+1+3, 4+1+1,
                            1+1+2, 5+1+2+3, 
                            3+1+3, 2+1+4))))
-  normalized <- normalize_ratings(ratings)
-  expect_that(unnormalize_ratings(normalized, normalized$ratings),
-              is_equivalent_to(ratings))
 })
 
 test_that('build_slopeone: empty rating', {
